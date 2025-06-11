@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mừng Sinh Nhật Nhi Cá Nheo!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: #ffdde1; /* Màu nền dự phòng */
+            color: #fff;
+        }
+
+        canvas {
+            display: block;
+        }
+        
+        #initial-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #ffdde1, #ee9ca7);
+            cursor: pointer;
+            transition: opacity 1s ease;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #initial-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #initial-screen h1 {
+            font-family: 'Pacifico', cursive;
+            font-size: 3rem;
+            color: #581845;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin: 0;
+            margin-bottom: 25px; /* Tăng khoảng cách */
+        }
+
+        #initial-screen p {
+            font-size: 1.2rem;
+            margin-top: 10px;
+            color: #581845;
+        }
+        
+        .envelope {
+            position: relative;
+            width: 200px;
+            height: 125px;
+            background-color: #f8b1c2;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .envelope-flap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f49aac;
+            clip-path: polygon(0 0, 100% 0, 50% 50%);
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        
+        .heart-icon {
+            font-size: 40px;
+            color: #fff;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="initial-screen">
+        <h1>Gửi tặng Nhi Cá Nheo thúi</h1>
+        <div class="envelope">
+            <div class="envelope-flap"></div>
+            <div class="heart-icon">💌</div>
+        </div>
+        <p>(Nhấn vào đây nhé)</p>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+        import TWEEN from 'https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.6.4/dist/tween.esm.js';
+
+        let scene, camera, renderer, controls;
+        let cardGroup = new THREE.Group();
+        let sceneObjects = [];
+        let floatingHearts = [];
+        let fireworks = [];
+        let cakeGroup;
+        const gravity = new THREE.Vector3(0, -0.02, 0);
+
+        // --- KHỞI TẠO CẢNH ---
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffe4e1);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 45);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+            
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.minDistance = 25;
+            controls.maxDistance = 80;
+            controls.maxPolarAngle = Math.PI / 1.9;
+            controls.target.set(0, 10, 0);
+            controls.enabled = false; 
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(20, 30, 25);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 4096;
+            directionalLight.shadow.mapSize.height = 4096;
+            scene.add(directionalLight);
+
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(200, 200),
+                new THREE.MeshLambertMaterial({ color: 0xfbc4c4 })
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            createCard();
+            createCake();
+            createBalloons();
+            createFloatingHearts();
+            createPresents();
+            createFlowers();
+            
+            scene.add(cardGroup);
+            cardGroup.visible = false;
+        }
+        
+        // --- TẠO CÁC ĐỐI TƯỢNG ---
+        function createCard() {
+            // Thiệp siêu rộng để không tràn chữ
+            const cardBase = new THREE.Mesh(
+                new THREE.BoxGeometry(40, 36, 0.2),
+                new THREE.MeshStandardMaterial({ color: 0xfff8fC })
+            );
+            cardBase.receiveShadow = true;
+            cardBase.position.y = 18;
+            cardGroup.add(cardBase);
+            createInvitationText();
+        }
+
+        function createCake() {
+            cakeGroup = new THREE.Group();
+            const tier1 = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 2, 32), new THREE.MeshStandardMaterial({ color: 0xf49aac, roughness: 0.5 }));
+            tier1.castShadow = true;
+            const tier2 = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.8, 2, 32), new THREE.MeshStandardMaterial({ color: 0xf8b1c2, roughness: 0.5 }));
+            tier2.position.y = 2; tier2.castShadow = true;
+            const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1, 8), new THREE.MeshStandardMaterial({ color: 0x7ec8e3 }));
+            candle.position.y = 4.5;
+            const flame = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffd700 }));
+            flame.position.y = 0.6; candle.add(flame);
+            const pointLight = new THREE.PointLight(0xffd700, 1.5, 25); flame.add(pointLight);
+            cakeGroup.add(tier1, tier2, candle);
+            cakeGroup.position.set(0, 2, 8);
+            cakeGroup.scale.set(0,0,0);
+            cardGroup.add(cakeGroup);
+        }
+
+        function createInvitationText() {
+            const fontLoader = new FontLoader();
+            // Đổi sang font Gentilis, font này hỗ trợ tiếng Việt tốt hơn
+            fontLoader.load('https://cdn.jsdelivr.net/npm/three/examples/fonts/gentilis_bold.typeface.json', (font) => {
+                const textMaterial = new THREE.MeshStandardMaterial({ color: 0x900C3F, roughness: 0.4 });
+                const detailMaterial = new THREE.MeshStandardMaterial({ color: 0xC70039, roughness: 0.4 });
+                const createTextMesh = (text, size, yPos, material) => {
+                    const geo = new TextGeometry(text, { font: font, size: size, height: 0.3 });
+                    geo.center();
+                    const mesh = new THREE.Mesh(geo, material);
+                    mesh.position.set(0, yPos, 0.5);
+                    mesh.castShadow = true; mesh.scale.set(0,0,0); cardGroup.add(mesh);
+                };
+                
+                // Tách dòng và điều chỉnh lại bố cục, sử dụng tiếng Việt trực tiếp
+                createTextMesh('Helu em bé, Bốp Cá Bò đây!', 1.6, 30, textMaterial);
+                createTextMesh('Trân trọng mời em mặc thật lộng lẫy', 1.1, 26, textMaterial);
+                createTextMesh('để đến dự bữa tiệc sinh nhật thân mật.', 1.1, 24, textMaterial);
+                
+                createTextMesh('Tại: Pizza 4P\'s Âu Cơ', 1.3, 19, detailMaterial);
+                createTextMesh('Vào lúc: 18h30 - Ngày 12/06/2025', 1.2, 16, detailMaterial);
+                
+                createTextMesh('Hãy xác nhận lại bằng cách', 1, 12, textMaterial);
+                createTextMesh('trả lời mail này nhé! Yêu em bé thúi hehe', 1, 10, textMaterial);
+            });
+        }
+        
+        function createBalloons() {
+            const positions = [
+                { x: -25, y: 18 }, { x: 25, y: 20 },
+                { x: -33, y: 15 }, { x: 33, y: 16 },
+                { x: -30, y: 25 }, { x: 30, y: 22 },
+                { x: -40, y: 18 }, { x: 40, y: 20 },
+            ];
+
+            positions.forEach((pos) => {
+                const balloonGroup = new THREE.Group();
+                const balloon = new THREE.Mesh( new THREE.SphereGeometry(2.5, 32, 32), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(Math.random(), 0.9, 0.8), metalness: 0.3, roughness: 0.1 }));
+                balloon.castShadow = true;
+                const string = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }));
+                string.position.y = -5;
+                balloonGroup.add(balloon, string);
+                
+                const zPos = (Math.random() - 1.2) * 20; // Đẩy bóng bay ra xa hơn nữa
+                balloonGroup.position.set(pos.x, pos.y, zPos);
+                balloonGroup.scale.set(0,0,0); balloonGroup.userData.initialY = balloonGroup.position.y;
+                sceneObjects.push(balloonGroup);
+                scene.add(balloonGroup);
+            });
+        }
+        
+        function createPresents() {
+            for (let i = 0; i < 25; i++) {
+                const presentGroup = new THREE.Group();
+                const boxSize = Math.random() * 2 + 1.5;
+                const box = new THREE.Mesh(new THREE.BoxGeometry(boxSize, boxSize, boxSize), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(Math.random(), 0.8, 0.7) }));
+                box.castShadow = true;
+                const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const ribbonH = new THREE.Mesh(new THREE.BoxGeometry(boxSize * 1.1, boxSize * 0.2, boxSize * 1.1), ribbonMat);
+                const ribbonV = new THREE.Mesh(new THREE.BoxGeometry(boxSize * 0.2, boxSize * 1.1, boxSize * 1.1), ribbonMat);
+                presentGroup.add(box, ribbonH, ribbonV);
+                let posX, posZ;
+                do { posX = (Math.random() - 0.5) * 90; posZ = (Math.random() - 0.5) * 80;
+                } while (posX > -22 && posX < 22 && posZ < 25 && posZ > -15);
+                presentGroup.position.set(posX, boxSize / 2, posZ + 10);
+                presentGroup.rotation.y = Math.random() * Math.PI;
+                presentGroup.scale.set(0,0,0);
+                sceneObjects.push(presentGroup);
+                scene.add(presentGroup);
+            }
+        }
+        
+        function createFlowers() {
+            for (let i = 0; i < 150; i++) {
+                const flowerGroup = new THREE.Group();
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 5), new THREE.MeshStandardMaterial({ color: 0x90ee90 }));
+                stem.position.y = 0.25;
+                const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(Math.random(), 1, 0.8) }));
+                head.position.y = 0.65;
+                flowerGroup.add(stem, head);
+                flowerGroup.castShadow = true;
+                let posX, posZ;
+                do { posX = (Math.random() - 0.5) * 100; posZ = (Math.random() - 0.5) * 90;
+                } while (posX > -20 && posX < 20 && posZ < 20 && posZ > -10);
+                flowerGroup.position.set(posX, 0, posZ + 5);
+                flowerGroup.scale.set(0,0,0);
+                sceneObjects.push(flowerGroup);
+                scene.add(flowerGroup);
+            }
+        }
+        
+        function createFloatingHearts() {
+             const heartShape = new THREE.Shape(); const x = -0.5, y = -0.5; heartShape.moveTo( x + 0.25, y + 0.25 ); heartShape.bezierCurveTo( x + 0.25, y + 0.25, x + 0.2, y, x, y ); heartShape.bezierCurveTo( x - 0.3, y, x - 0.3, y + 0.35,x - 0.3, y + 0.35 ); heartShape.bezierCurveTo( x - 0.3, y + 0.55, x - 1.5, y + 0.77, x + 0.25, y + 0.95 ); heartShape.bezierCurveTo( x + 0.6, y + 0.77, x + 0.8, y + 0.55, x + 0.8, y + 0.35 ); heartShape.bezierCurveTo( x + 0.8, y + 3.5, x + 0.8, y, x + 0.5, y ); heartShape.bezierCurveTo( x + 0.35, y, x + 0.25, y + 0.25, x + 0.25, y + 0.25 );
+             const geometry = new THREE.ShapeGeometry(heartShape); const material = new THREE.MeshBasicMaterial({color: 0xff69b4, side: THREE.DoubleSide, transparent: true, opacity: 0.5});
+             for (let i = 0; i < 60; i++) {
+                const heart = new THREE.Mesh(geometry, material);
+                heart.position.set((Math.random() - 0.5) * 50, -5, (Math.random() - 0.5) * 40);
+                heart.rotation.z = Math.random() * Math.PI;
+                heart.userData.velocity = new THREE.Vector3(0, 0.02 + Math.random() * 0.04, 0);
+                floatingHearts.push(heart);
+                scene.add(heart);
+            }
+        }
+        
+        class Firework {
+             constructor({ x, y, z, color, velocity }) { this.color = color; this.rocket = this.createParticle(x, y, z, color, velocity); this.exploded = false; this.explosionParticles = []; }
+             createParticle(x, y, z, color, velocity, size = 0.2) { const p = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 8), new THREE.MeshBasicMaterial({ color })); p.position.set(x, y, z); p.userData.velocity = velocity; p.userData.life = 1.0; scene.add(p); return p; }
+             explode() { this.exploded = true; const pos = this.rocket.position; scene.remove(this.rocket); for (let i = 0; i < 100; i++) { const speed = 0.5 + Math.random() * 0.5; const angle = Math.random() * Math.PI * 2; const elevation = (Math.random() - 0.5) * Math.PI; const velocity = new THREE.Vector3( Math.cos(angle) * Math.cos(elevation) * speed, Math.sin(elevation) * speed, Math.sin(angle) * Math.cos(elevation) * speed ); const p = this.createParticle(pos.x, pos.y, pos.z, this.color, velocity, 0.1); this.explosionParticles.push(p); } }
+             update() { if (!this.exploded) { this.rocket.userData.velocity.add(gravity); this.rocket.position.add(this.rocket.userData.velocity); if (this.rocket.userData.velocity.y < 0) this.explode(); } else { this.explosionParticles.forEach((p, index) => { p.userData.velocity.multiplyScalar(0.97); p.userData.velocity.add(gravity.clone().multiplyScalar(0.1)); p.position.add(p.userData.velocity); p.userData.life -= 0.015; p.material.opacity = p.userData.life > 0 ? p.userData.life : 0; p.material.transparent = true; if (p.userData.life <= 0) { scene.remove(p); this.explosionParticles.splice(index, 1); } }); } }
+             isDone() { return this.exploded && this.explosionParticles.length === 0; }
+        }
+        
+        function launchFirework() {
+            const x = (Math.random() - 0.5) * 30;
+            const z = 10 + Math.random() * 15;
+            const color = new THREE.Color().setHSL(Math.random(), 1, 0.7);
+            const velocity = new THREE.Vector3(0, 0.8 + Math.random() * 0.5, 0);
+            fireworks.push(new Firework({ x, y: 0, z, color, velocity }));
+        }
+        
+        // --- ANIMATION & TƯƠNG TÁC ---
+        function startAnimation() {
+            document.getElementById('initial-screen').classList.add('hidden');
+            controls.enabled = true;
+            cardGroup.visible = true;
+
+            new TWEEN.Tween(camera.position).to({ x: 0, y: 18, z: 48 }, 2500)
+                .easing(TWEEN.Easing.Quadratic.InOut).start();
+            
+            cardGroup.children.forEach(child => {
+                 if (child.scale && (child.scale.x === 0)) {
+                    new TWEEN.Tween(child.scale).to({ x: 1, y: 1, z: 1 }, 1500 + Math.random() * 500)
+                    .easing(TWEEN.Easing.Elastic.Out).delay(500).start();
+                 }
+            });
+
+            sceneObjects.forEach(child => {
+                 if (child.scale.length() === 0) {
+                    new TWEEN.Tween(child.scale).to({ x: 1, y: 1, z: 1 }, 1500 + Math.random() * 500)
+                    .easing(TWEEN.Easing.Elastic.Out).delay(1000 + Math.random()*500).start();
+                 }
+            });
+            
+            setTimeout(() => {
+                launchFirework();
+                setInterval(launchFirework, 700 + Math.random() * 800);
+            }, 2000);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+            
+            if(cakeGroup) cakeGroup.rotation.y += 0.005;
+
+            floatingHearts.forEach(h => {
+                h.position.add(h.userData.velocity);
+                h.rotation.z += 0.01;
+                if(h.position.y > 40) h.position.y = -5;
+            });
+
+            sceneObjects.forEach(obj => {
+                if(obj.userData.initialY) {
+                    obj.position.y = obj.userData.initialY + Math.sin(Date.now() * 0.001 + obj.position.x) * 0.5;
+                }
+            });
+            
+            fireworks.forEach((fw, i) => {
+                fw.update();
+                if(fw.isDone()) fireworks.splice(i, 1);
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        document.getElementById('initial-screen').addEventListener('click', startAnimation, { once: true });
+        
+        init();
+        animate();
+    </script>
+</body>
+</html>
